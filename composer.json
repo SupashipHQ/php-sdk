@@ -1,0 +1,27 @@
+{
+  "name": "supashiphq/php-sdk",
+  "description": "Lightweight PHP SDK for Supaship feature flags (no runtime dependencies)",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.1",
+    "ext-json": "*",
+    "ext-openssl": "*"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "Supaship\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Supaship\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit"
+  }
+}

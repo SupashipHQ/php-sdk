@@ -1,0 +1,37 @@
+# Runs full checks when you push a version tag (e.g. v1.0.0).
+# Publishing to Packagist still requires a one-time setup (see DEPLOY.md): Packagist pulls from GitHub when tags appear.
+
+name: Release Supaship PHP SDK
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: json, openssl
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish --strict
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Run tests
+        run: composer test
+
+      - name: Package name reminder
+        run: |
+          echo "If Packagist is linked to this repo, it will pick up tag ${GITHUB_REF_NAME} automatically (may take a minute)."
+          echo "See DEPLOY.md if the version does not appear on https://packagist.org/packages/supashiphq/php-sdk"
