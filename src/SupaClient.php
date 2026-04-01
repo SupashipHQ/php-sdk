@@ -104,15 +104,19 @@ final class SupaClient
         return $this->defaultContext;
     }
 
-    public function getFeatureFallback(string $featureName): mixed
+    /**
+     * @return mixed
+     */
+    public function getFeatureFallback(string $featureName)
     {
         return $this->featureDefinitions[$featureName] ?? null;
     }
 
     /**
      * @param array{context?: array<string, string|int|float|bool|null>|null} $options
+     * @return mixed
      */
-    public function getFeature(string $featureName, array $options = []): mixed
+    public function getFeature(string $featureName, array $options = [])
     {
         try {
             $batch = $this->getFeatures([$featureName], $options);
@@ -154,7 +158,10 @@ final class SupaClient
      * @param array<string, string|int|float|bool|null>|null $override
      * @return array<string, string|int|float|bool|null>|null
      */
-    private function resolveMergedContext(mixed $override): ?array
+    /**
+     * @param mixed $override
+     */
+    private function resolveMergedContext($override): ?array
     {
         if (!is_array($override)) {
             return $this->defaultContext;
@@ -301,7 +308,11 @@ final class SupaClient
             }
         }
 
-        throw $last ?? new \RuntimeException('Request failed');
+        if ($last instanceof \Throwable) {
+            throw $last;
+        }
+
+        throw new \RuntimeException('Request failed');
     }
 
     /**
@@ -339,7 +350,12 @@ final class SupaClient
         return $out;
     }
 
-    private function coerceVariation(mixed $variation, mixed $fallback): mixed
+    /**
+     * @param mixed $variation
+     * @param mixed $fallback
+     * @return mixed
+     */
+    private function coerceVariation($variation, $fallback)
     {
         if ($variation !== null) {
             return $variation;
