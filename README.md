@@ -4,8 +4,10 @@ Lightweight, zero-dependency (runtime) client for [Supaship](https://supaship.co
 
 ## Requirements
 
-- PHP 8.1+
+- PHP 7.4+
 - Extensions: `json`, `openssl` (for `https://` to Edge)
+
+The repo’s `composer.json` sets `config.platform.php` to **7.4.33** so **`composer.lock`** stays installable on PHP 7.4 (transitive dev tools). That does not affect apps that `composer require` this library; only this package’s root install uses it.
 
 ## Install
 
@@ -85,6 +87,8 @@ $client->getFeature('new-ui', ['context' => ['plan' => 'enterprise']]);
 ## Framework integrations
 
 `SupaClient` has no framework-specific code paths: register it once in the container (or a bootstrap file), inject it where you need flags, and call `getFeature` / `getFeatures`. All three examples assume `composer require supashiphq/php-sdk` is already done.
+
+The **SDK** supports **PHP 7.4+**. **Laravel examples** below use **PHP 8.1+** syntax (e.g. `readonly` constructor promotion). For Symfony, adjust to your version’s PHP requirement.
 
 Evaluations are **synchronous** (each call waits for the HTTP response unless you wrap them yourself, e.g. queue or async jobs).
 
@@ -251,10 +255,17 @@ use Symfony\Component\HttpKernel\KernelEvents;
 
 final class SupashipContextSubscriber implements EventSubscriberInterface
 {
-    public function __construct(
-        private readonly SupaClient $client,
-        private readonly Security $security,
-    ) {}
+    /** @var SupaClient */
+    private $client;
+
+    /** @var Security */
+    private $security;
+
+    public function __construct(SupaClient $client, Security $security)
+    {
+        $this->client = $client;
+        $this->security = $security;
+    }
 
     public function onKernelRequest(RequestEvent $event): void
     {
@@ -554,6 +565,8 @@ Why this works:
 ### Asserting what would be sent to Edge
 
 The handler receives the POST URL and the **request body string** (JSON). Capture it in a closure when you care about `environment`, `features`, or `context`:
+
+`json_decode`’s third parameter is the **maximum nesting depth**; **`512` is PHP’s default**. On PHP 7.4 you cannot use named arguments, so you pass that default explicitly whenever you need the fourth parameter (`JSON_THROW_ON_ERROR`). e.g. `json_decode($jsonBody, true, 512, JSON_THROW_ON_ERROR)`.
 
 ```php
 $captured = null;

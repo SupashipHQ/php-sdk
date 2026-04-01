@@ -13,7 +13,7 @@ final class HttpStubTest extends TestCase
     public function testSuccessHandlerReturnsExpectedPayload(): void
     {
         $handler = HttpStub::success(['flag' => true]);
-        $decoded = json_decode($handler('', '{}')['body'], true, flags: JSON_THROW_ON_ERROR);
+        $decoded = json_decode($handler('', '{}')['body'], true, 512, JSON_THROW_ON_ERROR);
 
         self::assertSame(['flag' => ['variation' => true]], $decoded['features']);
     }

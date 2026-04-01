@@ -155,7 +155,7 @@ final class SupaClientTest extends TestCase
         ], JSON_THROW_ON_ERROR);
 
         $client = $this->makeClient(static function (string $url, string $json) use ($body): array {
-            $decoded = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
+            $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
             self::assertSame(['feature1', 'feature2'], $decoded['features']);
             self::assertSame('test-env', $decoded['environment']);
 
@@ -217,7 +217,7 @@ final class SupaClientTest extends TestCase
     {
         $client = $this->makeClient(
             static function (string $url, string $json): array {
-                $decoded = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
+                $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
                 $expectedEmailHash = hash('sha256', 'user@example.com');
 
                 self::assertSame([
@@ -248,7 +248,7 @@ final class SupaClientTest extends TestCase
     {
         $client = $this->makeClient(
             static function (string $url, string $json): array {
-                $decoded = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
+                $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
                 self::assertSame([
                     'default' => 'ctx',
                     'request' => 'override',
