@@ -1,0 +1,116 @@
+# Manual publish: validate, test, then create a GitHub Release and tag.
+# In GitHub: Actions → Publish Supaship PHP SDK → Run workflow → enter version (e.g. 1.0.0).
+# Packagist still updates from the new tag if the repo webhook is configured (see DEPLOY.md).
+
+name: Publish Supaship PHP SDK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 1.2.0 or v1.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository (full history, all tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: json, openssl
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish --strict
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Run tests
+        run: composer test
+
+      - name: Resolve version tag
+        id: version
+        env:
+          RAW_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+          STRIPPED="${RAW_VERSION#v}"
+          if ! printf '%s' "$STRIPPED" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?(\+[a-zA-Z0-9.]+)?$'; then
+            echo "::error::Version must be semver-like, e.g. 1.0.0 or v1.0.0 (optional pre-release: 1.0.0-beta.1)"
+            exit 1
+          fi
+          TAG="v${STRIPPED}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "stripped=${STRIPPED}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release notes from commits since last GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          NOTES_FILE="${GITHUB_WORKSPACE}/release-notes.md"
+
+          PREV_TAG=$(gh api "repos/${REPO}/releases/latest" --jq '.tag_name // empty' 2>/dev/null || true)
+
+          if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "null" ]; then
+            PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          fi
+
+          HEADER="## Changes since previous release"
+          if [ -z "$PREV_TAG" ]; then
+            HEADER="## Changes (no prior GitHub release or git tag found)"
+            LOG=$(git log --pretty=format:'- %s (%h)' --no-merges -n 200)
+          elif git rev-parse "${PREV_TAG}^{commit}" >/dev/null 2>&1; then
+            LOG=$(git log "${PREV_TAG}..HEAD" --pretty=format:'- %s (%h)' --no-merges)
+          else
+            HEADER="## Changes (previous tag \`${PREV_TAG}\` not found locally — showing recent history)"
+            LOG=$(git log --pretty=format:'- %s (%h)' --no-merges -n 200)
+          fi
+
+          if [ -z "$LOG" ]; then
+            LOG="_No new commits in this range._"
+          fi
+
+          {
+            echo "$HEADER"
+            echo ""
+            echo "$LOG"
+            echo ""
+          } > "$NOTES_FILE"
+
+      - name: Create GitHub Release (and tag)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          NOTES_FILE="${GITHUB_WORKSPACE}/release-notes.md"
+
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "::error::Release or tag ${TAG} already exists. Bump the version."
+            exit 1
+          fi
+
+          gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "$TAG" \
+            --notes-file "$NOTES_FILE"
+
+          echo "Created ${TAG}. If Packagist is linked, it should pick up this tag shortly."
+          echo "See DEPLOY.md for troubleshooting."
