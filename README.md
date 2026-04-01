@@ -440,13 +440,168 @@ class Home extends Controller
 - Use **`sensitiveContextProperties`** in the client config when passing emails or IDs you want hashed before they leave your server (same as the JavaScript SDK).
 - Prefer **`getFeatures(['a','b','c'])`** for a single HTTP round-trip instead of many **`getFeature`** calls when loading a page.
 
+## Testing
+
+Unit tests should **not** call Supaship Edge. Pass an **`httpHandler`** under `networkConfig` (same hook as in [Advanced: `httpHandler`](#advanced-httphandler)) so `SupaClient` never opens a socket.
+
+### `Supaship\Testing\HttpStub`
+
+The package includes a tiny helper so you do not hand-build JSON for every test:
+
+```php
+use Supaship\SupaClient;
+use Supaship\Testing\HttpStub;
+
+$client = new SupaClient([
+    'sdkKey' => 'test-key',
+    'environment' => 'test',
+    'features' => [
+        'new-ui' => false,
+        'theme-config' => ['darkMode' => false],
+    ],
+    'context' => ['userId' => '42'],
+    'networkConfig' => [
+        'httpHandler' => HttpStub::success([
+            'new-ui' => true,
+            'theme-config' => ['darkMode' => true, 'primaryColor' => '#111'],
+        ]),
+    ],
+]);
+
+$this->assertTrue($client->getFeature('new-ui'));
+```
+
+Simulate API or transport failures (client falls back to your configured defaults):
+
+```php
+'networkConfig' => [
+    'httpHandler' => HttpStub::failure(503, 'unavailable'),
+],
+```
+
+### Laravel: testing a route that injects `SupaClient`
+
+Your app resolves `SupaClient` from the container (e.g. `AppServiceProvider` registers a **singleton**). In a feature test you **swap** that binding for a client wired with **`HttpStub`**, then call the route. Laravel will inject your test double instead of the real client.
+
+Assume this route (simplified):
+
+```php
+Route::get('/', function (SupaClient $client) {
+    $isNewUi = $client->getFeature('cool-new-feature', ['context' => [
+        'userId' => '123',
+    ]]);
+
+    return $isNewUi ? view('new-welcome') : view('welcome');
+});
+```
+
+Use the **same `features` fallback map** shape as in production (at least the keys you request). Register a client whose `httpHandler` returns the flag value you want for that test:
+
+```php
+<?php
+
+namespace Tests\Feature;
+
+use Supaship\SupaClient;
+use Supaship\Testing\HttpStub;
+use Tests\TestCase;
+
+class WelcomeRouteTest extends TestCase
+{
+    private function clientWithFlag(bool $coolNewFeatureEnabled): SupaClient
+    {
+        return new SupaClient([
+            'sdkKey' => 'test',
+            'environment' => 'testing',
+            'features' => [
+                'cool-new-feature' => false,
+            ],
+            'context' => [],
+            'networkConfig' => [
+                'httpHandler' => HttpStub::success([
+                    'cool-new-feature' => $coolNewFeatureEnabled,
+                ]),
+            ],
+        ]);
+    }
+
+    public function test_home_uses_welcome2_when_flag_is_true(): void
+    {
+        $this->app->instance(SupaClient::class, $this->clientWithFlag(true));
+
+        $this->get('/')
+            ->assertOk()
+            ->assertViewIs('new-welcome');
+    }
+
+    public function test_home_uses_welcome_when_flag_is_false(): void
+    {
+        $this->app->instance(SupaClient::class, $this->clientWithFlag(false));
+
+        $this->get('/')
+            ->assertOk()
+            ->assertViewIs('welcome');
+    }
+}
+```
+
+Why this works:
+
+- **`$this->app->instance(SupaClient::class, …)`** tells Laravel: “when anything needs `SupaClient`, use this instance.” It runs **before** `$this->get('/')`, so the closure receives your stubbed client.
+- **`HttpStub::success([...])`** simulates Edge returning that variation, so **`getFeature`** never performs a real HTTP request.
+- To test **fallback** behavior (e.g. Edge down), use **`HttpStub::failure()`** and assert `welcome` if your fallback for `cool-new-feature` is false.
+
+### Asserting what would be sent to Edge
+
+The handler receives the POST URL and the **request body string** (JSON). Capture it in a closure when you care about `environment`, `features`, or `context`:
+
+```php
+$captured = null;
+
+$client = new SupaClient([
+    'sdkKey' => 'sk',
+    'environment' => 'staging',
+    'features' => ['promo' => false],
+    'context' => ['region' => 'eu'],
+    'networkConfig' => [
+        'httpHandler' => function (string $url, string $jsonBody) use (&$captured) {
+            $captured = json_decode($jsonBody, true, flags: JSON_THROW_ON_ERROR);
+
+            return ['statusCode' => 200, 'body' => '{"features":{"promo":{"variation":true}}}'];
+        },
+    ],
+]);
+
+$client->getFeatures(['promo'], ['context' => ['plan' => 'pro']]);
+
+$this->assertSame('staging', $captured['environment']);
+$this->assertSame(['promo'], $captured['features']);
+$this->assertSame(['region' => 'eu', 'plan' => 'pro'], $captured['context']);
+```
+
+### PHPUnit in your app
+
+Add a dev dependency and point to your tests directory (typical `phpunit.xml.dist`):
+
+```bash
+composer require --dev phpunit/phpunit
+```
+
+Then run:
+
+```bash
+vendor/bin/phpunit
+```
+
+The SDK’s own test suite is `composer test` from a clone of this repository (`vendor/bin/phpunit` after `composer install`).
+
 ## Constants
 
 `Supaship\Constants::DEFAULT_FEATURES_URL` and `DEFAULT_EVENTS_URL` match the JavaScript SDK defaults.
 
 ## Advanced: `httpHandler`
 
-For custom HTTP stacks or tests, you can inject a handler (same idea as `fetchFn` in the JavaScript SDK):
+For **production** custom HTTP (proxy, corporate CA, tracing), or ad-hoc test doubles, inject a handler (same idea as `fetchFn` in the JavaScript SDK). For most unit tests, prefer **`HttpStub`** in the [Testing](#testing) section.
 
 ```php
 $client = new SupaClient([
@@ -464,12 +619,14 @@ $client = new SupaClient([
 
 The handler must return `['statusCode' => int, 'body' => string]` where `body` is the raw JSON response.
 
-## Developing & tests
+## Developing & tests (this repository)
 
 ```bash
 composer install
 composer test
 ```
+
+This runs PHPUnit on `tests/`, including stub coverage for **`Supaship\Testing\HttpStub`**.
 
 Maintainers: To ship a version from GitHub, use **Actions → Publish Supaship PHP SDK** (`publish.yml`): it validates, runs tests, and opens a GitHub Release with auto-generated notes from commits since the last release.
 
