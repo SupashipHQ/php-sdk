@@ -1,6 +1,6 @@
 {
   "name": "supashiphq/php-sdk",
-  "description": "Lightweight PHP SDK for Supaship feature flags (no runtime dependencies)",
+  "description": "PHP SDK for Supaship feature flags",
   "type": "library",
   "license": "MIT",
   "require": {
