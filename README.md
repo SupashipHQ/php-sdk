@@ -20,7 +20,7 @@ composer require supaship/php-sdk
 ```php
 <?php
 
-use Supaship\SupaClient;
+use Supaship\SupashipClient;
 
 $features = [
     'new-ui' => false,
@@ -30,7 +30,7 @@ $features = [
     ],
 ];
 
-$client = new SupaClient([
+$client = new SupashipClient([
     'sdkKey' => getenv('SUPASHIP_SDK_KEY'),
     'environment' => 'production',
     'features' => $features,
@@ -86,7 +86,7 @@ $client->getFeature('new-ui', ['context' => ['plan' => 'enterprise']]);
 
 ## Framework integrations
 
-`SupaClient` has no framework-specific code paths: register it once in the container (or a bootstrap file), inject it where you need flags, and call `getFeature` / `getFeatures`. All three examples assume `composer require supaship/php-sdk` is already done.
+`SupashipClient` has no framework-specific code paths: register it once in the container (or a bootstrap file), inject it where you need flags, and call `getFeature` / `getFeatures`. All three examples assume `composer require supaship/php-sdk` is already done.
 
 The **SDK** supports **PHP 7.4+**. **Laravel examples** below use **PHP 8.1+** syntax (e.g. `readonly` constructor promotion). For Symfony, adjust to your version’s PHP requirement.
 
@@ -130,16 +130,16 @@ return [
 
 ```php
 use Illuminate\Support\ServiceProvider;
-use Supaship\SupaClient;
+use Supaship\SupashipClient;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(SupaClient::class, function ($app) {
+        $this->app->singleton(SupashipClient::class, function ($app) {
             $config = $app['config']->get('supaship');
 
-            return new SupaClient([
+            return new SupashipClient([
                 'sdkKey' => $config['sdk_key'],
                 'environment' => $config['environment'],
                 'features' => $config['features'],
@@ -159,11 +159,11 @@ In `AppServiceProvider::boot()` or a middleware:
 
 ```php
 use Illuminate\Support\Facades\Auth;
-use Supaship\SupaClient;
+use Supaship\SupashipClient;
 
 public function boot(): void
 {
-    $this->app->afterResolving(SupaClient::class, function (SupaClient $client) {
+    $this->app->afterResolving(SupashipClient::class, function (SupashipClient $client) {
         $user = Auth::user();
         if ($user) {
             $client->updateContext([
@@ -178,11 +178,11 @@ public function boot(): void
 **5. Use in a controller**
 
 ```php
-use Supaship\SupaClient;
+use Supaship\SupashipClient;
 
 class DashboardController extends Controller
 {
-    public function __construct(private readonly SupaClient $features) {}
+    public function __construct(private readonly SupashipClient $features) {}
 
     public function index()
     {
@@ -222,14 +222,14 @@ parameters:
             darkMode: false
 ```
 
-For larger `features` maps, you can load a dedicated file with `imports:` or define the array in PHP via a small config class; the important part is passing the same structure into `SupaClient`.
+For larger `features` maps, you can load a dedicated file with `imports:` or define the array in PHP via a small config class; the important part is passing the same structure into `SupashipClient`.
 
 **3. Service definition** in `config/services.yaml`:
 
 ```yaml
 services:
-    Supaship\SupaClient:
-        class: Supaship\SupaClient
+    Supaship\SupashipClient:
+        class: Supaship\SupashipClient
         arguments:
             - {
                   sdkKey: '%supaship.sdk_key%',
@@ -247,7 +247,7 @@ services:
 
 namespace App\EventSubscriber;
 
-use Supaship\SupaClient;
+use Supaship\SupashipClient;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -255,13 +255,13 @@ use Symfony\Component\HttpKernel\KernelEvents;
 
 final class SupashipContextSubscriber implements EventSubscriberInterface
 {
-    /** @var SupaClient */
+    /** @var SupashipClient */
     private $client;
 
     /** @var Security */
     private $security;
 
-    public function __construct(SupaClient $client, Security $security)
+    public function __construct(SupashipClient $client, Security $security)
     {
         $this->client = $client;
         $this->security = $security;
@@ -298,7 +298,7 @@ Register the subscriber (Symfony auto-wires if `App\` is configured; otherwise a
 **5. Controller**
 
 ```php
-use Supaship\SupaClient;
+use Supaship\SupashipClient;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -306,7 +306,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class HomeController extends AbstractController
 {
     #[Route('/', name: 'home')]
-    public function index(SupaClient $features): Response
+    public function index(SupashipClient $features): Response
     {
         $newUi = $features->getFeature('new-ui');
 
@@ -361,17 +361,17 @@ class SupashipFeatures
 namespace Config;
 
 use CodeIgniter\Config\BaseService;
-use Supaship\SupaClient;
+use Supaship\SupashipClient;
 
 class Services extends BaseService
 {
-    public static function supaship(bool $getShared = true): SupaClient
+    public static function supaship(bool $getShared = true): SupashipClient
     {
         if ($getShared) {
             return static::getSharedInstance('supaship');
         }
 
-        return new SupaClient([
+        return new SupashipClient([
             'sdkKey' => getenv('supaship.sdkKey') ?: '',
             'environment' => getenv('supaship.environment') ?: 'production',
             'features' => SupashipFeatures::fallbacks(),
@@ -453,17 +453,17 @@ class Home extends Controller
 
 ## Testing
 
-Unit tests should **not** call Supaship Edge. Pass an **`httpHandler`** under `networkConfig` (same hook as in [Advanced: `httpHandler`](#advanced-httphandler)) so `SupaClient` never opens a socket.
+Unit tests should **not** call Supaship Edge. Pass an **`httpHandler`** under `networkConfig` (same hook as in [Advanced: `httpHandler`](#advanced-httphandler)) so `SupashipClient` never opens a socket.
 
 ### `Supaship\Testing\HttpStub`
 
 The package includes a tiny helper so you do not hand-build JSON for every test:
 
 ```php
-use Supaship\SupaClient;
+use Supaship\SupashipClient;
 use Supaship\Testing\HttpStub;
 
-$client = new SupaClient([
+$client = new SupashipClient([
     'sdkKey' => 'test-key',
     'environment' => 'test',
     'features' => [
@@ -490,14 +490,14 @@ Simulate API or transport failures (client falls back to your configured default
 ],
 ```
 
-### Laravel: testing a route that injects `SupaClient`
+### Laravel: testing a route that injects `SupashipClient`
 
-Your app resolves `SupaClient` from the container (e.g. `AppServiceProvider` registers a **singleton**). In a feature test you **swap** that binding for a client wired with **`HttpStub`**, then call the route. Laravel will inject your test double instead of the real client.
+Your app resolves `SupashipClient` from the container (e.g. `AppServiceProvider` registers a **singleton**). In a feature test you **swap** that binding for a client wired with **`HttpStub`**, then call the route. Laravel will inject your test double instead of the real client.
 
 Assume this route (simplified):
 
 ```php
-Route::get('/', function (SupaClient $client) {
+Route::get('/', function (SupashipClient $client) {
     $isNewUi = $client->getFeature('cool-new-feature', ['context' => [
         'userId' => '123',
     ]]);
@@ -513,15 +513,15 @@ Use the **same `features` fallback map** shape as in production (at least the ke
 
 namespace Tests\Feature;
 
-use Supaship\SupaClient;
+use Supaship\SupashipClient;
 use Supaship\Testing\HttpStub;
 use Tests\TestCase;
 
 class WelcomeRouteTest extends TestCase
 {
-    private function clientWithFlag(bool $coolNewFeatureEnabled): SupaClient
+    private function clientWithFlag(bool $coolNewFeatureEnabled): SupashipClient
     {
-        return new SupaClient([
+        return new SupashipClient([
             'sdkKey' => 'test',
             'environment' => 'testing',
             'features' => [
@@ -538,7 +538,7 @@ class WelcomeRouteTest extends TestCase
 
     public function test_home_uses_welcome2_when_flag_is_true(): void
     {
-        $this->app->instance(SupaClient::class, $this->clientWithFlag(true));
+        $this->app->instance(SupashipClient::class, $this->clientWithFlag(true));
 
         $this->get('/')
             ->assertOk()
@@ -547,7 +547,7 @@ class WelcomeRouteTest extends TestCase
 
     public function test_home_uses_welcome_when_flag_is_false(): void
     {
-        $this->app->instance(SupaClient::class, $this->clientWithFlag(false));
+        $this->app->instance(SupashipClient::class, $this->clientWithFlag(false));
 
         $this->get('/')
             ->assertOk()
@@ -558,7 +558,7 @@ class WelcomeRouteTest extends TestCase
 
 Why this works:
 
-- **`$this->app->instance(SupaClient::class, …)`** tells Laravel: “when anything needs `SupaClient`, use this instance.” It runs **before** `$this->get('/')`, so the closure receives your stubbed client.
+- **`$this->app->instance(SupashipClient::class, …)`** tells Laravel: “when anything needs `SupashipClient`, use this instance.” It runs **before** `$this->get('/')`, so the closure receives your stubbed client.
 - **`HttpStub::success([...])`** simulates Edge returning that variation, so **`getFeature`** never performs a real HTTP request.
 - To test **fallback** behavior (e.g. Edge down), use **`HttpStub::failure()`** and assert `welcome` if your fallback for `cool-new-feature` is false.
 
@@ -571,7 +571,7 @@ The handler receives the POST URL and the **request body string** (JSON). Captur
 ```php
 $captured = null;
 
-$client = new SupaClient([
+$client = new SupashipClient([
     'sdkKey' => 'sk',
     'environment' => 'staging',
     'features' => ['promo' => false],
@@ -617,7 +617,7 @@ The SDK’s own test suite is `composer test` from a clone of this repository (`
 For **production** custom HTTP (proxy, corporate CA, tracing), or ad-hoc test doubles, inject a handler (same idea as `fetchFn` in the JavaScript SDK). For most unit tests, prefer **`HttpStub`** in the [Testing](#testing) section.
 
 ```php
-$client = new SupaClient([
+$client = new SupashipClient([
     'sdkKey' => '...',
     'environment' => 'production',
     'features' => $features,

@@ -7,7 +7,7 @@ namespace Supaship\Testing;
 use JsonException;
 
 /**
- * Builds {@see SupaClient} networkConfig httpHandlers for unit tests (no real HTTP).
+ * Builds {@see SupashipClient} networkConfig httpHandlers for unit tests (no real HTTP).
  */
 final class HttpStub
 {

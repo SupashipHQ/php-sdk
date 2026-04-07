@@ -12,7 +12,7 @@ use JsonException;
  *
  * On network or HTTP errors, returns configured fallback values (or rethrows when requesting zero features).
  */
-final class SupaClient
+final class SupashipClient
 {
     private string $sdkKey;
 

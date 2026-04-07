@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Supaship\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Supaship\SupaClient;
+use Supaship\SupashipClient;
 use Supaship\Testing\HttpStub;
 
 final class HttpStubTest extends TestCase
@@ -20,7 +20,7 @@ final class HttpStubTest extends TestCase
 
     public function testClientUsesStubWithoutNetwork(): void
     {
-        $client = new SupaClient([
+        $client = new SupashipClient([
             'sdkKey' => 'test',
             'environment' => 'test',
             'features' => ['x' => false],

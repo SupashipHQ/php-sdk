@@ -7,9 +7,9 @@ namespace Supaship\Tests;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use Supaship\Constants;
-use Supaship\SupaClient;
+use Supaship\SupashipClient;
 
-final class SupaClientTest extends TestCase
+final class SupashipClientTest extends TestCase
 {
     private const SDK_KEY = 'test-sdk-key';
 
@@ -32,7 +32,7 @@ final class SupaClientTest extends TestCase
         ?array $features = null,
         array $context = [],
         array $configExtras = []
-    ): SupaClient {
+    ): SupashipClient {
         $network = array_merge(
             [
                 'featuresAPIUrl' => 'https://example.test/features',
@@ -49,7 +49,7 @@ final class SupaClientTest extends TestCase
             'networkConfig' => $network,
         ];
 
-        return new SupaClient(array_merge($base, $configExtras));
+        return new SupashipClient(array_merge($base, $configExtras));
     }
 
     public function testConstructorThrowsWhenRequiredKeyMissing(): void
@@ -57,7 +57,7 @@ final class SupaClientTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('sdkKey');
 
-        new SupaClient([
+        new SupashipClient([
             'environment' => 'x',
             'features' => [],
             'context' => [],
@@ -66,7 +66,7 @@ final class SupaClientTest extends TestCase
 
     public function testDefaultNetworkOptionsMatchJsSdk(): void
     {
-        $client = new SupaClient([
+        $client = new SupashipClient([
             'sdkKey' => 'k',
             'environment' => 'e',
             'features' => ['a' => false],
@@ -91,7 +91,7 @@ final class SupaClientTest extends TestCase
 
     public function testCustomRetryConfiguration(): void
     {
-        $client = new SupaClient([
+        $client = new SupashipClient([
             'sdkKey' => 'k',
             'environment' => 'e',
             'features' => ['a' => false],
