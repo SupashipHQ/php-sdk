@@ -1,5 +1,5 @@
 {
-  "name": "supashiphq/php-sdk",
+  "name": "supaship/php-sdk",
   "description": "PHP SDK for Supaship feature flags",
   "type": "library",
   "license": "MIT",

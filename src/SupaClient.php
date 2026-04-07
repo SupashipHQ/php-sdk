@@ -7,7 +7,7 @@ namespace Supaship;
 use JsonException;
 
 /**
- * Evaluates feature flags against Supaship Edge. Behavior aligns with @supashiphq/javascript-sdk:
+ * Evaluates feature flags against Supaship Edge. Behavior aligns with @supaship/javascript-sdk:
  * POST JSON { environment, features, context }, Bearer sdkKey, response { features: { name: { variation } } }.
  *
  * On network or HTTP errors, returns configured fallback values (or rethrows when requesting zero features).

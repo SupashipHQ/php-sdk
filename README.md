@@ -1,6 +1,6 @@
 # Supaship PHP SDK
 
-Lightweight, zero-dependency (runtime) client for [Supaship](https://supaship.com) feature flags. The API mirrors [@supashiphq/javascript-sdk](https://www.npmjs.com/package/@supashiphq/javascript-sdk): same config shape, POST body, and fallback behavior.
+Lightweight, zero-dependency (runtime) client for [Supaship](https://supaship.com) feature flags.
 
 ## Requirements
 
@@ -12,7 +12,7 @@ The repo’s `composer.json` sets `config.platform.php` to **7.4.33** so **`comp
 ## Install
 
 ```bash
-composer require supashiphq/php-sdk
+composer require supaship/php-sdk
 ```
 
 ## Quick start
@@ -86,7 +86,7 @@ $client->getFeature('new-ui', ['context' => ['plan' => 'enterprise']]);
 
 ## Framework integrations
 
-`SupaClient` has no framework-specific code paths: register it once in the container (or a bootstrap file), inject it where you need flags, and call `getFeature` / `getFeatures`. All three examples assume `composer require supashiphq/php-sdk` is already done.
+`SupaClient` has no framework-specific code paths: register it once in the container (or a bootstrap file), inject it where you need flags, and call `getFeature` / `getFeatures`. All three examples assume `composer require supaship/php-sdk` is already done.
 
 The **SDK** supports **PHP 7.4+**. **Laravel examples** below use **PHP 8.1+** syntax (e.g. `readonly` constructor promotion). For Symfony, adjust to your version’s PHP requirement.
 
